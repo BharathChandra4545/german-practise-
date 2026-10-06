@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bharath German Practice</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">DE</span><div><strong>Bharath</strong><small>German Practice</small></div></div>
+      <nav>
+        <button class="nav-item active" data-view="dashboard">⌂ <span>Dashboard</span></button>
+        <button class="nav-item" data-view="vocabulary">▤ <span>Vocabulary</span></button>
+        <button class="nav-item" data-view="practice">◉ <span>Practice</span></button>
+        <button class="nav-item" data-view="listening">◖ <span>Listening</span></button>
+        <button class="nav-item" data-view="exams">□ <span>Practice exams</span></button>
+        <button class="nav-item" data-view="review">↻ <span>Review mistakes</span></button>
+      </nav>
+      <div class="sidebar-foot"><span class="avatar">B</span><div><b>Keep going!</b><small>Your German journey</small></div></div>
+    </aside>
+    <main class="main">
+      <header><div><p class="eyebrow">TUESDAY, OCTOBER 6</p><h1 id="page-title">Good morning, Bharath <span>✦</span></h1></div><div class="header-actions"><button class="icon-btn">⌕</button><button class="profile">B</button></div></header>
+      <section id="dashboard" class="view active-view">
+        <div class="hero"><div><p class="eyebrow light">YOUR DAILY PRACTICE</p><h2>Small steps.<br><em>Big progress.</em></h2><p>Build your German confidence one word at a time.</p><button class="primary" data-view="practice">Continue learning <span>→</span></button></div><div class="hero-art"><span>GUTEN<br><b>MORGEN</b></span><i>✦</i></div></div>
+        <div class="stats-row"><div class="stat-card"><span class="stat-icon purple">◉</span><div><b id="streak">0</b><small>Day streak</small></div></div><div class="stat-card"><span class="stat-icon orange">♨</span><div><b id="accuracy">0%</b><small>Accuracy</small></div></div><div class="stat-card"><span class="stat-icon green">✓</span><div><b id="learned">0</b><small>Words learned</small></div></div><div class="stat-card"><span class="stat-icon blue">◷</span><div><b>12 min</b><small>Practice time</small></div></div></div>
+        <div class="section-heading"><div><h3>Choose your level</h3><p>Pick up where you left off</p></div><button class="text-btn" data-view="practice">View all →</button></div>
+        <div class="level-grid"><button class="level-card a1" data-level="A1" data-view="practice"><div><span class="level-tag">BEGINNER</span><h3>A1 Foundations</h3><p>Everyday words & phrases</p><b>Start learning <span>→</span></b></div><strong>A1</strong></button><button class="level-card a2" data-level="A2" data-view="practice"><div><span class="level-tag">ELEMENTARY</span><h3>A2 Confident</h3><p>Express yourself with ease</p><b>Start learning <span>→</span></b></div><strong>A2</strong></button></div>
+        <div class="section-heading"><div><h3>Explore topics</h3><p>Learn vocabulary that matters to you</p></div><button class="text-btn" data-view="vocabulary">Browse all →</button></div><div id="topic-preview" class="topic-grid"></div>
+      </section>
+      <section id="vocabulary" class="view"><div class="section-heading"><div><p class="eyebrow">YOUR WORD BANK</p><h2>Vocabulary library</h2><p>Search, filter and listen to your next 2,000+ words.</p></div></div><div class="filters"><input id="search" placeholder="Search German or English..."><select id="level-filter"><option value="">All levels</option><option>A1</option><option>A2</option></select><select id="topic-filter"><option value="">All topics</option></select></div><div id="vocab-list" class="vocab-grid"></div></section>
+      <section id="practice" class="view"><div class="section-heading"><div><p class="eyebrow">NORMAL PRACTICE</p><h2>Choose a topic</h2><p>50 questions per topic, with German audio on every question.</p></div><div class="segmented"><button class="selected" data-practice-level="A1">A1</button><button data-practice-level="A2">A2</button></div></div><div id="practice-topics" class="practice-grid"></div><div id="quiz" class="quiz hidden"></div></section>
+      <section id="listening" class="view"><div class="listening-hero"><p class="eyebrow light">AUDIO IMMERSION</p><h2>Train your ear.</h2><p>Listen first. Understand more.</p><button class="primary" id="start-listening">Start listening practice <span>→</span></button></div><div id="listening-card" class="quiz hidden"></div></section>
+      <section id="exams" class="view"><div class="section-heading"><div><p class="eyebrow">TEST YOURSELF</p><h2>Practice exams</h2><p>Mixed vocabulary and listening questions.</p></div></div><div class="exam-grid"><div class="exam-card"><span class="exam-icon">A1</span><h3>A1 Starter exam</h3><p>50 mixed questions · 20 min</p><button class="secondary" data-exam="A1">Begin exam →</button></div><div class="exam-card"><span class="exam-icon orange-bg">A2</span><h3>A2 Progress exam</h3><p>50 mixed questions · 25 min</p><button class="secondary" data-exam="A2">Begin exam →</button></div></div></section>
+      <section id="review" class="view"><div class="section-heading"><div><p class="eyebrow">LEARN FROM ERRORS</p><h2>Review mistakes</h2><p>Turn tricky words into strengths.</p></div></div><div id="review-content" class="empty-state">No mistakes yet. Complete a practice session and your missed words will appear here.</div></section>
+    </main>
+  </div>
+  <div id="toast" class="toast"></div>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
