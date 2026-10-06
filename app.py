@@ -105,15 +105,24 @@ def vocabulary():
     valid_topics = set(A1_TOPICS + A2_TOPICS)
     if topic and topic not in valid_topics:
         return jsonify(error="unknown topic"), 400
-    sql = "SELECT * FROM vocabulary WHERE 1=1"
+    sql = """
+        SELECT id, german, english, article, pronunciation, plural,
+               example_de, example_en,
+               CASE WHEN level IN ('A1', 'A2') THEN level ELSE topic END AS level,
+               CASE WHEN level IN ('A1', 'A2') THEN topic ELSE level END AS topic
+        FROM vocabulary
+        WHERE 1=1
+    """
     args = []
     if query:
         sql += " AND (german LIKE ? OR english LIKE ?)"
         args.extend([f"%{query}%", f"%{query}%"])
     if level:
-        sql += " AND level = ?"; args.append(level)
+        sql += " AND (CASE WHEN level IN ('A1', 'A2') THEN level ELSE topic END) = ?"
+        args.append(level)
     if topic:
-        sql += " AND topic = ?"; args.append(topic)
+        sql += " AND (CASE WHEN level IN ('A1', 'A2') THEN topic ELSE level END) = ?"
+        args.append(topic)
     sql += " ORDER BY id LIMIT 60"
     result = [dict(row) for row in execute(conn, sql, args).fetchall()]
     conn.close()
