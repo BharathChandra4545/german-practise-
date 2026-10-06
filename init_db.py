@@ -2,7 +2,7 @@
 
 Usage:
     DATABASE_URL=postgresql://... python init_db.py
-"""
+f"""
 import os
 from pathlib import Path
 
@@ -20,8 +20,22 @@ def main():
                 cursor.execute(script)
                 for table in ("topics", "words", "vocabulary"):
                     cursor.execute(
-                        f"ALTER TABLE {table} DROP CONSTRAINT IF EXISTS "
-                        f"{table}_level_check"
+                        f"""
+                        DO $$
+                        DECLARE constraint_name TEXT;
+                        BEGIN
+                            FOR constraint_name IN
+                                SELECT conname
+                                FROM pg_constraint
+                                WHERE conrelid = '{table}'::regclass AND contype = 'c'
+                            LOOP
+                                EXECUTE format(
+                                    'ALTER TABLE %I DROP CONSTRAINT %I',
+                                    '{table}', constraint_name
+                                );
+                            END LOOP;
+                        END $$;
+                        """,
                     )
                     cursor.execute(
                         f"ALTER TABLE {table} ADD CONSTRAINT {table}_level_check "
