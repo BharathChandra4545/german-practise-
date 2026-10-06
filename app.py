@@ -3,7 +3,6 @@ import os
 from database import connect, placeholder_sql
 
 app = Flask(__name__)
-_database_ready = False
 
 A1_TOPICS = [
     "Greetings & Communication", "Personal Information", "Family & People",
@@ -59,13 +58,6 @@ def seed_database():
         from seed_database import seed
         seed()
 
-
-@app.before_request
-def ensure_database():
-    global _database_ready
-    if not _database_ready:
-        seed_database()
-        _database_ready = True
 
 @app.route("/")
 def index():
