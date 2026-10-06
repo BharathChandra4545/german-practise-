@@ -10,10 +10,33 @@ from pathlib import Path
 
 BASE = Path(__file__).parent
 SQLITE_PATH = Path(os.environ.get("GERMAN_DB_PATH", str(BASE / "german_practice.db")))
+DATABASE_URL = os.getenv("DATABASE_URL")
+_PLACEHOLDER_VALUES = {
+    "DATABASE_POSTGRES_URL",
+    "DATABASE_POSTGRES_PRISMA_URL",
+    "DATABASE_URL",
+}
+
+
+def _validated_database_url():
+    value = DATABASE_URL
+    if not value:
+        return None
+    if value in _PLACEHOLDER_VALUES or "://" not in value:
+        raise RuntimeError(
+            "DATABASE_URL is configured incorrectly. Set it to a PostgreSQL "
+            "connection string beginning with postgresql:// or postgres://."
+        )
+    scheme = value.split("://", 1)[0].lower()
+    if scheme not in {"postgresql", "postgres"}:
+        raise RuntimeError(
+            "DATABASE_URL must use the PostgreSQL connection-string format."
+        )
+    return value
 
 
 def is_postgres():
-    return bool(os.environ.get("DATABASE_URL"))
+    return _validated_database_url() is not None
 
 
 def _sqlite_connection():
@@ -24,14 +47,20 @@ def _sqlite_connection():
 
 
 def connect():
-    if not is_postgres():
+    database_url = _validated_database_url()
+    if not database_url:
+        if os.environ.get("VERCEL") or os.environ.get("FLASK_ENV") == "production":
+            raise RuntimeError(
+                "DATABASE_URL is required in production. Configure a PostgreSQL "
+                "connection string in the deployment environment."
+            )
         return _sqlite_connection()
     try:
         import psycopg
         from psycopg.rows import dict_row
     except ImportError as exc:
         raise RuntimeError("DATABASE_URL is set but psycopg is not installed") from exc
-    return psycopg.connect(os.environ["DATABASE_URL"], row_factory=dict_row)
+    return psycopg.connect(database_url, row_factory=dict_row)
 
 
 def placeholder_sql(sql):
@@ -49,4 +78,3 @@ def transaction():
         raise
     finally:
         connection.close()
-
