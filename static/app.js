@@ -85,13 +85,44 @@ async function startQuiz(topic) {
   try { words = await api(`/api/vocabulary?level=${currentLevel}&topic=${encodeURIComponent(topic)}`); } catch (error) { return toast(error.message); }
   if (!words.length) return toast("No vocabulary is available for this topic.");
   currentWord = words[Math.floor(Math.random() * words.length)]; selectedAnswer = null;
+  let submitting = false;
   const distractors = words.filter(w => w.id !== currentWord.id).sort(() => Math.random() - .5).slice(0, 3);
   const options = [currentWord, ...distractors].sort(() => Math.random() - .5);
+  $("#quiz").classList.add("practice-quiz");
   $("#quiz").classList.remove("hidden");
-  $("#quiz").innerHTML = `<p class="eyebrow">${escapeHtml(currentLevel)} · ${escapeHtml(topic)} · Question ${practicePosition} of 50</p><h2>What does this German word mean?</h2><h3>${escapeHtml(currentWord.article ? currentWord.article + " " : "")}${escapeHtml(practiceGerman(currentWord))}</h3><p class="pron">${escapeHtml(currentWord.pronunciation)}</p><button class="audio" id="quiz-audio">🔊 Listen</button><div class="options">${options.map(o => `<button class="option" data-id="${o.id}">${escapeHtml(o.english)}</button>`).join("")}</div><div class="quiz-actions"><button class="primary" id="submit-answer">Check answer <span>→</span></button></div>`;
-  $$("#quiz .option").forEach(b => b.addEventListener("click", () => { $$("#quiz .option").forEach(x => x.classList.remove("selected")); b.classList.add("selected"); selectedAnswer = Number(b.dataset.id); }));
+  const progress = practicePosition / 50 * 100;
+  $("#quiz").innerHTML = `<div class="practice-header"><div><p class="eyebrow">${escapeHtml(currentLevel)} · Practice</p><strong>${escapeHtml(topic)}</strong></div><span>Question ${practicePosition} / 50</span></div><div class="practice-progress"><span style="width:${progress}%"></span></div><div class="practice-question-card"><p class="practice-prompt">What does this German word mean?</p><h2>${escapeHtml(currentWord.article ? currentWord.article + " " : "")}${escapeHtml(practiceGerman(currentWord))}</h2><p class="pron">${escapeHtml(currentWord.pronunciation)}</p><button class="audio practice-audio" id="quiz-audio">🔊 Listen</button><div class="options">${options.map((o, index) => `<button class="option" data-id="${o.id}"><span class="option-label">${String.fromCharCode(65 + index)}.</span><span>${escapeHtml(o.english)}</span></button>`).join("")}</div><div class="quiz-actions"><button class="primary practice-submit" id="submit-answer" disabled>Submit <span>→</span></button></div></div>`;
+  $$("#quiz .option").forEach(b => b.addEventListener("click", () => {
+    if (submitting) return;
+    $$("#quiz .option").forEach(x => x.classList.remove("selected"));
+    b.classList.add("selected");
+    selectedAnswer = Number(b.dataset.id);
+    $("#submit-answer").disabled = false;
+  }));
   $("#quiz-audio").onclick = () => speakGerman(`${currentWord.article || ""} ${practiceGerman(currentWord)}`);
-  $("#submit-answer").onclick = async () => { if (selectedAnswer === null) return toast("Choose an answer first."); const correct = selectedAnswer === currentWord.id; try { await api("/api/attempt", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({vocab_id:currentWord.id, correct})}); } catch (error) { return toast(error.message); } toast(correct ? "Correct! Gut gemacht 🎉" : `Not quite — ${currentWord.english}`); stats(); if (practicePosition < 50) { practicePosition += 1; setTimeout(() => startQuiz(topic), 700); } else { toast("Practice complete!"); } };
+  $("#submit-answer").onclick = async () => {
+    if (selectedAnswer === null || submitting) return;
+    submitting = true;
+    $$("#quiz .option").forEach(button => button.disabled = true);
+    $("#submit-answer").disabled = true;
+    const correct = selectedAnswer === currentWord.id;
+    try {
+      await api("/api/attempt", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({vocab_id:currentWord.id, correct})});
+    } catch (error) {
+      submitting = false;
+      $$("#quiz .option").forEach(button => button.disabled = false);
+      $("#submit-answer").disabled = false;
+      return toast("Something went wrong while saving your answer. Please try again.");
+    }
+    toast(correct ? "Correct! Gut gemacht 🎉" : `Not quite — ${currentWord.english}`);
+    stats();
+    if (practicePosition < 50) {
+      practicePosition += 1;
+      setTimeout(() => startQuiz(topic), 700);
+    } else {
+      toast("Practice complete!");
+    }
+  };
 }
 async function startExam(level) {
   let words;
