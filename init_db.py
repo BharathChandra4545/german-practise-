@@ -37,10 +37,6 @@ def main():
                         END $$;
                         """,
                     )
-                    cursor.execute(
-                        f"ALTER TABLE {table} ADD CONSTRAINT {table}_level_check "
-                        "CHECK (level IN ('A1', 'A2'))"
-                    )
         else:
             connection.executescript(script)
         connection.commit()
