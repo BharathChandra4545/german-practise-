@@ -1,12 +1,7 @@
 from flask import Flask, jsonify, render_template, request
-import sqlite3
-from pathlib import Path
 import os
+from database import connect, placeholder_sql
 
-BASE = Path(__file__).parent
-# Vercel's project filesystem is read-only. /tmp is writable but ephemeral,
-# so serverless instances recreate the small seed database when needed.
-DB = Path(os.environ.get("GERMAN_DB_PATH", "/tmp/german_practice.db" if os.environ.get("VERCEL") else str(BASE / "german_practice.db")))
 app = Flask(__name__)
 
 A1_TOPICS = [
@@ -43,36 +38,25 @@ SEEDS = [
 ]
 
 def db():
-    conn = sqlite3.connect(DB)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+    return connect()
+
+
+def execute(conn, sql, params=()):
+    return conn.execute(placeholder_sql(sql), params)
+
+
+def scalar(row, key):
+    return row[key] if isinstance(row, dict) else row[0]
 
 def seed_database():
+    from init_db import main as init_db
+    init_db()
     conn = db()
-    conn.execute("""CREATE TABLE IF NOT EXISTS vocabulary (
-        id INTEGER PRIMARY KEY, german TEXT, english TEXT, article TEXT,
-        pronunciation TEXT, plural TEXT, level TEXT, topic TEXT,
-        example_de TEXT, example_en TEXT)""")
-    conn.execute("""CREATE TABLE IF NOT EXISTS attempts (
-        id INTEGER PRIMARY KEY, vocab_id INTEGER, correct INTEGER,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (vocab_id) REFERENCES vocabulary(id))""")
-    if conn.execute("SELECT COUNT(*) FROM vocabulary").fetchone()[0] < 2000:
-        conn.execute("DELETE FROM vocabulary")
-        all_topics = [("A1", topic) for topic in A1_TOPICS] + [("A2", topic) for topic in A2_TOPICS]
-        rows = []
-        for topic_index, (level, topic) in enumerate(all_topics):
-            for item in range(50):
-                seed = SEEDS[(topic_index * 50 + item) % len(SEEDS)]
-                german, english, article, pron, plural, ex_de, ex_en = seed
-                suffix = "" if item == 0 else f" · {item + 1}"
-                rows.append((german + suffix, english, article, pron, plural, level, topic, ex_de, ex_en))
-        conn.executemany("""INSERT INTO vocabulary
-            (german, english, article, pronunciation, plural, level, topic, example_de, example_en)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""", rows)
-    conn.commit()
+    count = scalar(execute(conn, "SELECT COUNT(*) AS count FROM vocabulary").fetchone(), "count")
     conn.close()
+    if count < 2000:
+        from seed_database import seed
+        seed()
 
 @app.route("/")
 def index():
@@ -94,11 +78,11 @@ def app_view():
 @app.get("/api/stats")
 def stats():
     conn = db()
-    total = conn.execute("SELECT COUNT(*) FROM vocabulary").fetchone()[0]
-    a1 = conn.execute("SELECT COUNT(*) FROM vocabulary WHERE level='A1'").fetchone()[0]
-    a2 = conn.execute("SELECT COUNT(*) FROM vocabulary WHERE level='A2'").fetchone()[0]
-    attempts = conn.execute("SELECT COUNT(*) FROM attempts").fetchone()[0]
-    correct = conn.execute("SELECT COALESCE(SUM(correct),0) FROM attempts").fetchone()[0]
+    total = scalar(execute(conn, "SELECT COUNT(*) AS count FROM vocabulary").fetchone(), "count")
+    a1 = scalar(execute(conn, "SELECT COUNT(*) AS count FROM vocabulary WHERE level='A1'").fetchone(), "count")
+    a2 = scalar(execute(conn, "SELECT COUNT(*) AS count FROM vocabulary WHERE level='A2'").fetchone(), "count")
+    attempts = scalar(execute(conn, "SELECT COUNT(*) AS count FROM attempts").fetchone(), "count")
+    correct = scalar(execute(conn, "SELECT COALESCE(SUM(correct),0) AS count FROM attempts").fetchone(), "count")
     conn.close()
     return jsonify(total=total, a1=a1, a2=a2, attempts=attempts, accuracy=round(correct / attempts * 100) if attempts else 0)
 
@@ -130,7 +114,7 @@ def vocabulary():
     if topic:
         sql += " AND topic = ?"; args.append(topic)
     sql += " ORDER BY id LIMIT 60"
-    result = [dict(row) for row in conn.execute(sql, args).fetchall()]
+    result = [dict(row) for row in execute(conn, sql, args).fetchall()]
     conn.close()
     return jsonify(result)
 
@@ -143,17 +127,17 @@ def attempt():
     if data.get("correct") not in (True, False):
         return jsonify(error="correct must be a boolean"), 400
     conn = db()
-    if conn.execute("SELECT 1 FROM vocabulary WHERE id = ?", (vocab_id,)).fetchone() is None:
+    if execute(conn, "SELECT 1 FROM vocabulary WHERE id = ?", (vocab_id,)).fetchone() is None:
         conn.close()
         return jsonify(error="unknown vocabulary item"), 404
-    conn.execute("INSERT INTO attempts (vocab_id, correct) VALUES (?, ?)", (vocab_id, int(data["correct"])))
+    execute(conn, "INSERT INTO attempts (vocab_id, correct) VALUES (?, ?)", (vocab_id, int(data["correct"])))
     conn.commit(); conn.close()
     return jsonify(ok=True)
 
 @app.get("/api/mistakes")
 def mistakes():
     conn = db()
-    rows = conn.execute("""SELECT v.*, COUNT(a.id) AS misses
+    rows = execute(conn, """SELECT v.*, COUNT(a.id) AS misses
         FROM vocabulary v JOIN attempts a ON a.vocab_id = v.id
         WHERE a.correct = 0 GROUP BY v.id ORDER BY MAX(a.created_at) DESC LIMIT 30""").fetchall()
     conn.close()
