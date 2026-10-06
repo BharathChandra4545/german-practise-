@@ -18,6 +18,15 @@ def main():
         if is_postgres():
             with connection.cursor() as cursor:
                 cursor.execute(script)
+                for table in ("topics", "words", "vocabulary"):
+                    cursor.execute(
+                        f"ALTER TABLE {table} DROP CONSTRAINT IF EXISTS "
+                        f"{table}_level_check"
+                    )
+                    cursor.execute(
+                        f"ALTER TABLE {table} ADD CONSTRAINT {table}_level_check "
+                        "CHECK (level IN ('A1', 'A2'))"
+                    )
         else:
             connection.executescript(script)
         connection.commit()
