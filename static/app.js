@@ -2,6 +2,7 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 let currentLevel = "A1", currentTopic = "", currentWord = null, selectedAnswer = null;
 let examWords = [], examIndex = 0, examCorrect = 0, listeningSelected = null;
+let practicePosition = 1;
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[char]);
@@ -53,7 +54,10 @@ async function loadTopics(level = "A1") {
   let topics;
   try { topics = await api(`/api/topics?level=${encodeURIComponent(level)}`); } catch (error) { return toast(error.message); }
   $("#practice-topics").innerHTML = topics.map(t => `<div class="practice-card" data-topic="${escapeHtml(t.name)}"><div><strong>${escapeHtml(t.name)}</strong><small>50 questions · ${level}</small></div><button class="secondary">Practice →</button></div>`).join("");
-  $$("#practice-topics .practice-card").forEach(b => b.addEventListener("click", () => startQuiz(b.dataset.topic)));
+  $$("#practice-topics .practice-card").forEach(b => b.addEventListener("click", () => {
+    practicePosition = 1;
+    startQuiz(b.dataset.topic);
+  }));
 }
 async function loadTopicPreview() {
   let topics;
@@ -73,6 +77,9 @@ async function loadVocabulary() {
   $("#vocab-list").innerHTML = words.length ? words.map(w => `<article class="vocab-card"><span class="badge">${escapeHtml(w.level)}</span><h3>${escapeHtml(w.article ? w.article + " " : "")}${escapeHtml(w.german)}</h3><div class="meaning">${escapeHtml(w.english)}</div><div class="pron">🗣 ${escapeHtml(w.pronunciation)}</div><div class="audio-row"><button class="audio" data-speak="${escapeHtml(`${w.article ? w.article + " " : ""}${w.german}`)}">🔊 Listen</button><button class="audio" data-speak="${escapeHtml(w.example_de)}">🔊 Example</button></div><div class="example">${escapeHtml(w.example_de)}<br><span>${escapeHtml(w.example_en)}</span></div><small>Plural: ${escapeHtml(w.plural)} · ${escapeHtml(w.topic)}</small></article>`).join("") : '<div class="empty-state">No vocabulary matches that search.</div>';
   $$("[data-speak]").forEach(b => b.addEventListener("click", () => speakGerman(b.dataset.speak)));
 }
+function practiceGerman(word) {
+  return String(word.german).replace(/\s·\s\d+$/, "");
+}
 async function startQuiz(topic) {
   currentTopic = topic; let words;
   try { words = await api(`/api/vocabulary?level=${currentLevel}&topic=${encodeURIComponent(topic)}`); } catch (error) { return toast(error.message); }
@@ -81,10 +88,10 @@ async function startQuiz(topic) {
   const distractors = words.filter(w => w.id !== currentWord.id).sort(() => Math.random() - .5).slice(0, 3);
   const options = [currentWord, ...distractors].sort(() => Math.random() - .5);
   $("#quiz").classList.remove("hidden");
-  $("#quiz").innerHTML = `<p class="eyebrow">${escapeHtml(currentLevel)} · ${escapeHtml(topic)}</p><h2>What does this German word mean?</h2><h3>${escapeHtml(currentWord.article ? currentWord.article + " " : "")}${escapeHtml(currentWord.german)}</h3><p class="pron">${escapeHtml(currentWord.pronunciation)}</p><button class="audio" id="quiz-audio">🔊 Listen</button><div class="options">${options.map(o => `<button class="option" data-id="${o.id}">${escapeHtml(o.english)}</button>`).join("")}</div><div class="quiz-actions"><button class="primary" id="submit-answer">Check answer <span>→</span></button></div>`;
+  $("#quiz").innerHTML = `<p class="eyebrow">${escapeHtml(currentLevel)} · ${escapeHtml(topic)} · Question ${practicePosition} of 50</p><h2>What does this German word mean?</h2><h3>${escapeHtml(currentWord.article ? currentWord.article + " " : "")}${escapeHtml(practiceGerman(currentWord))}</h3><p class="pron">${escapeHtml(currentWord.pronunciation)}</p><button class="audio" id="quiz-audio">🔊 Listen</button><div class="options">${options.map(o => `<button class="option" data-id="${o.id}">${escapeHtml(o.english)}</button>`).join("")}</div><div class="quiz-actions"><button class="primary" id="submit-answer">Check answer <span>→</span></button></div>`;
   $$("#quiz .option").forEach(b => b.addEventListener("click", () => { $$("#quiz .option").forEach(x => x.classList.remove("selected")); b.classList.add("selected"); selectedAnswer = Number(b.dataset.id); }));
-  $("#quiz-audio").onclick = () => speakGerman(`${currentWord.article || ""} ${currentWord.german}`);
-  $("#submit-answer").onclick = async () => { if (selectedAnswer === null) return toast("Choose an answer first."); const correct = selectedAnswer === currentWord.id; try { await api("/api/attempt", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({vocab_id:currentWord.id, correct})}); } catch (error) { return toast(error.message); } toast(correct ? "Correct! Gut gemacht 🎉" : `Not quite — ${currentWord.english}`); stats(); setTimeout(() => startQuiz(topic), 700); };
+  $("#quiz-audio").onclick = () => speakGerman(`${currentWord.article || ""} ${practiceGerman(currentWord)}`);
+  $("#submit-answer").onclick = async () => { if (selectedAnswer === null) return toast("Choose an answer first."); const correct = selectedAnswer === currentWord.id; try { await api("/api/attempt", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({vocab_id:currentWord.id, correct})}); } catch (error) { return toast(error.message); } toast(correct ? "Correct! Gut gemacht 🎉" : `Not quite — ${currentWord.english}`); stats(); if (practicePosition < 50) { practicePosition += 1; setTimeout(() => startQuiz(topic), 700); } else { toast("Practice complete!"); } };
 }
 async function startExam(level) {
   let words;
