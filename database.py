@@ -1,7 +1,7 @@
 """Database connection and portability helpers.
 
-PostgreSQL is used whenever DATABASE_URL is configured. SQLite remains available
-for local development without a database service.
+PostgreSQL is used whenever DATABASE_URL or DATABASE_POSTGRES_URL is configured.
+SQLite remains available for local development without a database service.
 """
 import os
 import sqlite3
@@ -10,7 +10,6 @@ from pathlib import Path
 
 BASE = Path(__file__).parent
 SQLITE_PATH = Path(os.environ.get("GERMAN_DB_PATH", str(BASE / "german_practice.db")))
-DATABASE_URL = os.getenv("DATABASE_URL")
 _PLACEHOLDER_VALUES = {
     "DATABASE_POSTGRES_URL",
     "DATABASE_POSTGRES_PRISMA_URL",
@@ -19,7 +18,8 @@ _PLACEHOLDER_VALUES = {
 
 
 def _validated_database_url():
-    value = DATABASE_URL
+    database_url = os.getenv("DATABASE_URL") or os.getenv("DATABASE_POSTGRES_URL")
+    value = database_url
     if not value:
         return None
     if value in _PLACEHOLDER_VALUES or "://" not in value:
@@ -32,7 +32,7 @@ def _validated_database_url():
         raise RuntimeError(
             "DATABASE_URL must use the PostgreSQL connection-string format."
         )
-    return value
+    return database_url
 
 
 def is_postgres():

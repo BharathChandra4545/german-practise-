@@ -12,7 +12,8 @@ py app.py
 ```
 
 Open `http://127.0.0.1:5000`. Without `DATABASE_URL`, local development uses SQLite.
-With `DATABASE_URL`, the app uses PostgreSQL and initializes the persistent schema
+With `DATABASE_URL` (or the Supabase/Vercel-provided `DATABASE_POSTGRES_URL`),
+the app uses PostgreSQL and initializes the persistent schema
 and seed data automatically on first start.
 
 Audio uses the browser Web Speech API with a German `de-DE` utterance and prefers an installed German voice. Browser speech permissions and available voices vary by operating system.
@@ -29,7 +30,9 @@ npx vercel --prod
 ## Persistent PostgreSQL setup
 
 Create a free PostgreSQL database with a provider such as Neon or Supabase, then
-set the connection string as `DATABASE_URL`. Never commit the value.
+Set the connection string as `DATABASE_URL` (primary). If your integration
+provides `DATABASE_POSTGRES_URL`, it is accepted as a fallback. Never commit
+either value.
 
 ```powershell
 $env:DATABASE_URL = "postgresql://user:password@host/database?sslmode=require"

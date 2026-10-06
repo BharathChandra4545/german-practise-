@@ -3,6 +3,7 @@ import os
 from database import connect, placeholder_sql
 
 app = Flask(__name__)
+_database_ready = False
 
 A1_TOPICS = [
     "Greetings & Communication", "Personal Information", "Family & People",
@@ -57,6 +58,14 @@ def seed_database():
     if count < 2000:
         from seed_database import seed
         seed()
+
+
+@app.before_request
+def ensure_database():
+    global _database_ready
+    if not _database_ready:
+        seed_database()
+        _database_ready = True
 
 @app.route("/")
 def index():
@@ -143,7 +152,6 @@ def mistakes():
     conn.close()
     return jsonify([dict(row) for row in rows])
 
-seed_database()
-
 if __name__ == "__main__":
+    seed_database()
     app.run(debug=os.environ.get("FLASK_DEBUG") == "1")

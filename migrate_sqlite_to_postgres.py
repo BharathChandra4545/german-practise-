@@ -13,8 +13,9 @@ from init_db import main as init_db
 
 
 def main():
-    if not os.environ.get("DATABASE_URL"):
-        raise RuntimeError("Set DATABASE_URL before migrating SQLite data")
+    database_url = os.getenv("DATABASE_URL") or os.getenv("DATABASE_POSTGRES_URL")
+    if not database_url:
+        raise RuntimeError("DATABASE_URL is not configured")
     source = Path(os.environ.get("GERMAN_DB_PATH", str(Path(__file__).parent / "german_practice.db")))
     if not source.exists():
         raise FileNotFoundError(f"SQLite database not found: {source}")
