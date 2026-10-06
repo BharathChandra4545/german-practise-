@@ -9,6 +9,10 @@ def execute(connection, sql, params=()):
 
 def seed():
     from init_db import main as init_db
+    lock_connection = None
+    if is_postgres():
+        lock_connection = connect()
+        execute(lock_connection, "SELECT pg_advisory_lock(?)", (917204,))
     init_db()
     connection = connect()
     try:
@@ -64,6 +68,8 @@ def seed():
         raise
     finally:
         connection.close()
+        if lock_connection is not None:
+            lock_connection.close()
     print("Seed complete: 2,000 vocabulary rows, 40 topics, listening questions.")
 
 
