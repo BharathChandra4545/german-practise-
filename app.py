@@ -140,7 +140,7 @@ def attempt():
     if execute(conn, "SELECT 1 FROM vocabulary WHERE id = ?", (vocab_id,)).fetchone() is None:
         conn.close()
         return jsonify(error="unknown vocabulary item"), 404
-    execute(conn, "INSERT INTO attempts (vocab_id, correct) VALUES (?, ?)", (vocab_id, int(data["correct"])))
+    execute(conn, "INSERT INTO attempts (vocab_id, correct) VALUES (?, ?)", (vocab_id, data["correct"]))
     conn.commit(); conn.close()
     return jsonify(ok=True)
 
