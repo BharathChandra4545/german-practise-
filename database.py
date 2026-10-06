@@ -7,6 +7,7 @@ import os
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 BASE = Path(__file__).parent
 SQLITE_PATH = Path(os.environ.get("GERMAN_DB_PATH", str(BASE / "german_practice.db")))
@@ -41,6 +42,13 @@ def is_postgres():
     return _validated_database_url() is not None
 
 
+def _psycopg_connection_url(database_url):
+    parts = urlsplit(database_url)
+    query = [(key, value) for key, value in parse_qsl(parts.query, keep_blank_values=True)
+             if key.lower() != "supa"]
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
+
+
 def _sqlite_connection():
     connection = sqlite3.connect(SQLITE_PATH)
     connection.row_factory = sqlite3.Row
@@ -62,7 +70,7 @@ def connect():
         from psycopg.rows import dict_row
     except ImportError as exc:
         raise RuntimeError("DATABASE_URL is set but psycopg is not installed") from exc
-    return psycopg.connect(database_url, row_factory=dict_row)
+    return psycopg.connect(_psycopg_connection_url(database_url), row_factory=dict_row)
 
 
 def placeholder_sql(sql):
