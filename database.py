@@ -19,6 +19,8 @@ _PLACEHOLDER_VALUES = {
 
 def _validated_database_url():
     database_url = os.getenv("DATABASE_URL") or os.getenv("DATABASE_POSTGRES_URL")
+    if database_url in _PLACEHOLDER_VALUES:
+        database_url = os.getenv("DATABASE_POSTGRES_URL")
     value = database_url
     if not value:
         return None
