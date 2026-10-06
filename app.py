@@ -83,7 +83,7 @@ def stats():
     a1 = scalar(execute(conn, "SELECT COUNT(*) AS count FROM vocabulary WHERE level='A1'").fetchone(), "count")
     a2 = scalar(execute(conn, "SELECT COUNT(*) AS count FROM vocabulary WHERE level='A2'").fetchone(), "count")
     attempts = scalar(execute(conn, "SELECT COUNT(*) AS count FROM attempts").fetchone(), "count")
-    correct = scalar(execute(conn, "SELECT COALESCE(SUM(correct),0) AS count FROM attempts").fetchone(), "count")
+    correct = scalar(execute(conn, "SELECT COALESCE(SUM(CASE WHEN correct THEN 1 ELSE 0 END),0) AS count FROM attempts").fetchone(), "count")
     conn.close()
     return jsonify(total=total, a1=a1, a2=a2, attempts=attempts, accuracy=round(correct / attempts * 100) if attempts else 0)
 
